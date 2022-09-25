@@ -1,0 +1,87 @@
+name: Build with ROOT
+
+on:
+  workflow_call:
+    inputs:
+      os:
+        required: true
+        type: string
+      compiler:
+        required: true
+        type: string
+      std:
+        required: true
+        type: string
+      cmake-version:
+        required: true
+        type: string
+      root-version:
+        required: true
+        type: string
+
+      build_type:
+        required: false
+        type: string
+        default: 'Release'
+      cmake_args:
+        required: false
+        type: string
+        default: ''
+      install_dir:
+        required: false
+        type: string
+        default: 'instdir'
+
+jobs:
+  build_with_root:
+    # The type of runner that the job will run on
+    name: ${{ inputs.compiler }} c++${{ inputs.std }} cmake-${{ inputs.cmake-version }} root-${{ inputs.root-version }}
+
+    runs-on: ${{ inputs.os }}
+
+    steps:
+    - name: Setup compiler
+      id: setup_cc
+      uses: rlalik/setup-cpp-compiler@v1.1
+      with:
+        compiler: ${{ inputs.compiler }}
+
+    - name: Setup CMake
+      uses: jwlawson/actions-setup-cmake@v1.12
+      with:
+        cmake-version: ${{ inputs.cmake-version }}
+
+    - name: Install common dependencies
+      run: |
+        sudo apt update
+        sudo apt install libgtest-dev lcov rapidjson-dev libcurl4-openssl-dev -y
+        sudo apt install python3-numpy libtbb-dev libxxhash0 -y
+        wget http://gccb.if.uj.edu.pl/code/root-cpp${{ inputs.std }}_${{ inputs.root-version }}_amd64.deb
+        sudo dpkg -i root-cpp${{ inputs.std }}_${{ inputs.root-version }}_amd64.deb
+
+    - name: Checkout repository
+      uses: actions/checkout@v1
+      with:
+        submodules: recursive
+
+    - name: Configure
+      shell: bash
+      env:
+        CC: ${{ steps.setup_cc.outputs.cc }}
+        CXX: ${{ steps.setup_cc.outputs.cxx }}
+      run: |
+        . /etc/profile
+        cmake --version
+        root-config --version
+        root-config --cflags
+        root-config --features
+        cmake \
+          -S . \
+          -B build \
+          -DCMAKE_BUILD_TYPE=${{ inputs.build_type }} \
+          -DCMAKE_INSTALL_PREFIX:PATH=${{ inputs.install_dir }} \
+          ${{ inputs.cmake_args }}
+
+    - name: Build
+      shell: bash
+      run: cmake --build build --config ${{ inputs.build_type }}
