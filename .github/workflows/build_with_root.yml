@@ -4,21 +4,23 @@ on:
   workflow_call:
     inputs:
       os:
-        required: true
+        required: false
         type: string
+        default: 'ubuntu-latest'
       compiler:
-        required: true
+        required: false
         type: string
+        default: 'gcc-latest'
       std:
         required: true
         type: string
       cmake-version:
-        required: true
+        required: false
         type: string
+        default: ''
       root-version:
         required: true
         type: string
-
       build_type:
         required: false
         type: string
